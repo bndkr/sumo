@@ -71,12 +71,13 @@ var _time := 0.0
 
 
 func _process(delta: float) -> void:
+	# Redrawn every frame: the number counter-rotates against the body, so it
+	# has to be redrawn as the body turns.
+	queue_redraw()
 	if is_off_balance:
 		_time += delta
-		queue_redraw()
 	if _flash > 0.0:
 		_flash = maxf(0.0, _flash - delta / FLASH_TIME)
-		queue_redraw()
 
 
 ## Bright flash on being struck. Makes a landing hit legible at speed, when the
@@ -120,6 +121,8 @@ func _draw() -> void:
 		return
 	var label := str(player_index + 1)
 	var text_size := font.get_string_size(label, HORIZONTAL_ALIGNMENT_CENTER, -1.0, LABEL_SIZE)
+	# Undo the body's rotation so the number reads upright whichever way it faces.
+	draw_set_transform(Vector2.ZERO, -global_rotation)
 	draw_string(
 		font,
 		Vector2(-text_size.x * 0.5, text_size.y * 0.32),
@@ -129,6 +132,7 @@ func _draw() -> void:
 		LABEL_SIZE,
 		Color(0.05, 0.05, 0.08, 0.75),
 	)
+	draw_set_transform(Vector2.ZERO)
 
 	if charge_ratio > 0.0:
 		_draw_charge_arc(charge_ratio)

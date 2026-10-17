@@ -11,9 +11,6 @@ const WARNING_COLOR := Color(0.93, 0.72, 0.16, 0.80)
 const RIM_COLOR := Color(0.97, 0.94, 0.86)
 const VOID_COLOR := Color(0.05, 0.05, 0.07)
 
-## Matches [constant Arena.SEGMENT_COUNT] so drawn wedges line up with collision.
-const SEGMENTS := 96
-
 ## Seconds per pulse of the rim highlight.
 const PULSE_SPEED := 2.2
 
@@ -23,6 +20,8 @@ const PULSE_AMOUNT := 0.35
 var safe_radius: float = 420.0
 var warning_radius: float = 600.0
 var wall_thickness: float = 28.0
+## Set by [Arena] from its own segment_count, so drawn wedges line up with collision.
+var segment_count: int = 96
 
 var _pulse := 0.0
 
@@ -52,7 +51,7 @@ func _draw() -> void:
 func _draw_ring(inner: float, outer: float, color: Color) -> void:
 	if outer <= inner:
 		return
-	for wedge in Arena.ring_wedges(inner, outer, SEGMENTS):
+	for wedge in Arena.ring_wedges(inner, outer, segment_count):
 		draw_colored_polygon(wedge, color)
 
 

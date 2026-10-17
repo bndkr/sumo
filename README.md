@@ -41,7 +41,30 @@ Headless checks:
 ```powershell
 godot --headless --path . --editor --quit     # import / validate
 godot --headless --path . --quit-after 120    # startup smoke test
+godot --headless --path . --script res://tests/run_tests.gd   # behaviour tests
 ```
+
+The tests live in `tests/`. They are plain GDScript with no third-party framework:
+`run_tests.gd` runs every `test_*` method in `tests/test_*.gd` in a fresh scene and
+exits non-zero if any fail. Tests that reproduce a known bug fail on purpose until
+the bug is fixed.
+
+Godot has no exception handling in GDScript, so a runtime error inside a test
+aborts that test and the runner still reports it as a pass. Check the output for
+`SCRIPT ERROR` lines as well as the PASS/FAIL summary.
+
+## Menus
+
+Launching the game opens the start screen (`scenes/main_menu.tscn`). **Play**
+starts a match and **Quit** closes the game. Both work with the left stick or D-pad
+and **A**; Play is focused on open.
+
+During a match, press **Start** on any controller (or **Escape**) to pause. The
+overlay offers **Resume**, **Main Menu** and **Quit**. B also resumes. The arena
+freezes while paused, and the overlay keeps responding.
+
+The menu and overlay art are drawn from simple polygons in `scripts/menu_backdrop.gd`
+and the `themes/game_theme.tres` styles. No image assets are used yet.
 
 ## Controls
 
@@ -197,7 +220,7 @@ makes the ring entirely unbounded.
 Release a **charged** shove and connect with nothing, and the wrestler is off
 balance for `whiff_recovery_time` (0.55 s): acceleration is scaled to zero, so
 the stick does nothing, and friction is tripled, so they cannot build momentum
-either. They also cannot start another charge — a whiff leaves no counter-attack.
+either. They also cannot start another charge or a guard — a whiff leaves no counter-attack or stance.
 
 0.55 s is roughly the time it takes to rebuild momentum from rest anyway
 (acceleration 2600 to top speed 560), so a whiffed charge is a net loss and an
@@ -220,6 +243,11 @@ This one is deliberately **not aimed**. A shove throws a victim along the
 attacker's line of attack; a collision throws them along the impact line. That
 contrast is the whole point — it is the difference between being hit and being
 used as a weapon.
+
+Transferred knockback into a guard is reduced by the guard's damage-taken factor,
+the same as a direct hit. The cooldown counts down every frame, so a pair can
+transfer again after `knockback_transfer_cooldown` (0.25 s) of separation or
+sustained contact.
 
 Momentum is never handed back to the player who threw it (`_knockback_source`),
 or two wrestlers would shove each other in a loop. Anything slower than
@@ -253,8 +281,9 @@ so connecting a controller mid-session updates it immediately.
 ## The guard
 
 Hold **B** and the wrestler plants. Movement and turning are both locked out,
-existing momentum is killed dead, and they take greatly reduced knockback while
-bouncing part of the blow back at the attacker.
+existing stick momentum is killed dead, and they take greatly reduced knockback
+while bouncing part of the blow back at the attacker. Knockback already in flight
+keeps sliding, so a guard pressed after an unblocked hit cannot undo it.
 
 `guard_coverage_ratio` is the dial you asked for, from **no coverage to full**:
 
@@ -317,7 +346,8 @@ While staggered the attacker cannot charge or guard either, so bouncing off a
 guard is punishable rather than a free trade.
 
 Guard and charge are mutually exclusive — both are immobile commitments, and
-cancelling a paid-for charge to enter one would be a silent loss. Guarding does
+cancelling a paid-for charge to enter one would be a silent loss. A guard also
+cannot start during a lunge or a whiff, so commitments never stack. Guarding does
 **not** trigger the Milestone 7 whiff state, and a hit landing on a guard still
 counts as connected for the attacker.
 

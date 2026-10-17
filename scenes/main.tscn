@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/game_manager.gd" id="2_manager"]
@@ -7,6 +7,7 @@
 [ext_resource type="Script" path="res://scripts/round_manager.gd" id="5_round"]
 [ext_resource type="Script" path="res://scripts/announcer.gd" id="6_announcer"]
 [ext_resource type="Script" path="res://scripts/scoreboard.gd" id="7_scoreboard"]
+[ext_resource type="PackedScene" path="res://scenes/pause_menu.tscn" id="8_pause"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_banner"]
 content_margin_left = 34.0
@@ -99,3 +100,5 @@ bbcode_enabled = true
 scroll_active = false
 fit_content = true
 theme_override_font_sizes/normal_font_size = 26
+
+[node name="PauseMenu" parent="." instance=ExtResource("8_pause")]

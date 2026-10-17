@@ -68,6 +68,7 @@ func _ready() -> void:
 	_view.safe_radius = safe_radius
 	_view.warning_radius = warning_radius
 	_view.wall_thickness = wall_thickness
+	_view.segment_count = segment_count
 	_view.set_process(true)
 
 	_warning_zone.body_entered.connect(_on_warning_body_entered)

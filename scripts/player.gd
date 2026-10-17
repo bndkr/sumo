@@ -425,6 +425,7 @@ func _physics_process(delta: float) -> void:
 	_update_stagger(delta)
 	_update_guard(delta)
 	_update_shove(delta)
+	_transfer_cooldown = maxf(0.0, _transfer_cooldown - delta)
 	_sync_charge_indicator()
 
 	var input_direction := PlayerInput.get_move_vector(player_index)
@@ -523,7 +524,7 @@ func _update_guard(delta: float) -> void:
 	_guard_was_down = down
 
 	if not is_guarding:
-		if pressed and _guard_cooldown_timer <= 0.0 and not is_staggered:
+		if pressed and _guard_cooldown_timer <= 0.0 and not is_staggered and recovery_state == RecoveryState.NONE:
 			_enter_guard()
 		return
 
@@ -538,13 +539,16 @@ func _update_guard(delta: float) -> void:
 func _enter_guard() -> void:
 	# Mutually exclusive with a charge: both are immobile commitments, and
 	# cancelling a paid-for charge to enter one would be a silent loss.
-	if shove_state == ShoveState.CHARGING:
+	# A lunge in flight is a commitment too. Starting a stance on it would leave
+	# the wrestler guarding and then whiffed at the same time.
+	if shove_state == ShoveState.CHARGING or _shove_timer > 0.0:
 		return
 	is_guarding = true
 	_guard_timer = guard_duration
 	guard_ratio = 1.0
-	# Planted: whatever momentum they had stops dead.
-	stop_motion()
+	# Planted: stick momentum stops dead, but knockback already in flight keeps
+	# sliding, so a late guard cannot undo a hit it did not block.
+	interrupt()
 	guard_started.emit()
 
 
@@ -586,10 +590,19 @@ func _transfer_knockback() -> void:
 		var push := -collision.get_normal()
 		if push.length_squared() < 0.001:
 			push = _knockback_velocity / speed
+		push = push.normalized()
+
+		# A guard absorbs a carried shove just as it absorbs a direct one. The
+		# blow arrives from this body, so coverage is judged along the line back to it.
+		var taken := 1.0
+		if other.is_guarding:
+			taken = lerpf(1.0, other.guard_damage_taken, other.guard_coverage_from(-push))
+		var passed := speed * knockback_transfer_ratio * taken
+
 		other.interrupt()
-		other.add_knockback(push.normalized() * speed * knockback_transfer_ratio, self)
+		other.add_knockback(push * passed, self)
 		_transfer_cooldown = knockback_transfer_cooldown
-		knockback_transferred.emit(other, speed * knockback_transfer_ratio)
+		knockback_transferred.emit(other, passed)
 		return
 
 
@@ -622,7 +635,9 @@ func _rotate_facing_toward(target_global_angle: float, delta: float) -> void:
 	# parks halfway to the target.
 	var parent := get_parent() as Node2D
 	var parent_rotation := parent.get_global_rotation() if parent != null else 0.0
-	rotation = lerp_angle(rotation, target_global_angle - parent_rotation, clampf(turn_speed * delta, 0.0, 1.0))
+	# Slippery footing turns the wrestler more slowly too, as design.md specifies
+	# for the warning track.
+	rotation = lerp_angle(rotation, target_global_angle - parent_rotation, clampf(turn_speed * surface_friction_scale * delta, 0.0, 1.0))
 
 
 func _update_shove(delta: float) -> void:
@@ -648,9 +663,8 @@ func _update_shove(delta: float) -> void:
 	if shove_state == ShoveState.READY:
 		charge_ratio = 0.0
 		_set_hitbox_radius(hitbox_radius_min)
-		# Helpless after a whiff means no counter-attack either. Guarding is
-		# already a commitment, so it stays available here. A staggered attacker
-		# cannot counter at all.
+		# Helpless after a whiff means no counter-attack either, and no stance.
+		# A staggered attacker cannot counter at all.
 		if pressed and _cooldown_timer <= 0.0 and not is_guarding and can_build_momentum():
 			shove_state = ShoveState.CHARGING
 			_charge_elapsed = 0.0
