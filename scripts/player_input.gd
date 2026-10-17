@@ -25,8 +25,14 @@ const DIRECTIONS: Array[String] = ["left", "right", "up", "down"]
 ## Action suffix for the shove button, bound per device like the movement axes.
 const SHOVE_SUFFIX := "shove"
 
+## Action suffix for the guard button.
+const GUARD_SUFFIX := "guard"
+
 ## Joypad button index for the Xbox "A" button.
 const JOY_BUTTON_A := 0
+
+## Joypad button index for the Xbox "B" button.
+const JOY_BUTTON_B := 1
 
 ## Sentinel device ID meaning "this slot is keyboard only, no joypad".
 const NO_DEVICE := -1
@@ -49,6 +55,14 @@ static func is_shove_pressed(player_index: int) -> bool:
 	return Input.is_action_pressed(prefix + "_" + SHOVE_SUFFIX)
 
 
+## True while the player's guard button is held.
+static func is_guard_pressed(player_index: int) -> bool:
+	var prefix := action_prefix(player_index)
+	if prefix == "":
+		return false
+	return Input.is_action_pressed(prefix + "_" + GUARD_SUFFIX)
+
+
 ## Returns "p1".."p4" for a valid 0-based [param player_index], or "" if out of range.
 static func action_prefix(player_index: int) -> String:
 	if player_index < 0 or player_index >= MAX_PLAYERS:
@@ -66,38 +80,46 @@ static func bind_device(player_index: int, device_id: int) -> void:
 	if prefix == "":
 		return
 
+	# Strip every joypad binding on the slot first, then re-add. Doing both in
+	# one pass means a new early return can never leave a stale device bound.
+	var actions := PackedStringArray()
+	for direction in DIRECTIONS:
+		actions.append(prefix + "_" + direction)
+	actions.append(prefix + "_" + SHOVE_SUFFIX)
+	actions.append(prefix + "_" + GUARD_SUFFIX)
+
+	for action in actions:
+		if not InputMap.has_action(action):
+			continue
+		# Keys are a permanent fallback and must survive.
+		for event in InputMap.action_get_events(action):
+			if event is InputEventJoypadMotion or event is InputEventJoypadButton:
+				InputMap.action_erase_event(action, event)
+
+	if device_id == NO_DEVICE:
+		return
+
 	for direction in DIRECTIONS:
 		var action: String = prefix + "_" + direction
 		if not InputMap.has_action(action):
 			continue
-
-		# Drop the previous joypad binding only; keys are a permanent fallback.
-		for event in InputMap.action_get_events(action):
-			if event is InputEventJoypadMotion:
-				InputMap.action_erase_event(action, event)
-
-		if device_id == NO_DEVICE:
-			continue
-
 		var motion := InputEventJoypadMotion.new()
 		motion.device = device_id
 		motion.axis = 0 if direction in ["left", "right"] else 1
 		motion.axis_value = -1.0 if direction in ["left", "up"] else 1.0
 		InputMap.action_add_event(action, motion)
 
-	# The shove button follows the same rebinding as the stick.
-	var shove := prefix + "_" + SHOVE_SUFFIX
-	if not InputMap.has_action(shove):
-		return
-	for event in InputMap.action_get_events(shove):
-		if event is InputEventJoypadButton:
-			InputMap.action_erase_event(shove, event)
-	if device_id == NO_DEVICE:
+	_add_button(prefix + "_" + SHOVE_SUFFIX, device_id, JOY_BUTTON_A)
+	_add_button(prefix + "_" + GUARD_SUFFIX, device_id, JOY_BUTTON_B)
+
+
+static func _add_button(action: String, device_id: int, index: int) -> void:
+	if not InputMap.has_action(action):
 		return
 	var button := InputEventJoypadButton.new()
 	button.device = device_id
-	button.button_index = JOY_BUTTON_A
-	InputMap.action_add_event(shove, button)
+	button.button_index = index
+	InputMap.action_add_event(action, button)
 
 
 ## Returns the device ID currently bound to [param player_index], or

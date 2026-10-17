@@ -11,11 +11,16 @@ Godot 4. See [design.md](design.md) for the full design and milestone list.
 - [x] M4: Elimination & round reset loop
 - [x] M5: The push mechanic (tap & charge)
 - [x] M6: Dynamic camera & juice
+- [x] M7: Commitment & chain reactions
+- [x] M8: The guard
 
-All six milestones are implemented. What is still placeholder: the wrestlers are
+Milestones 1–8 are implemented. What is still placeholder: the wrestlers are
 coloured circles, and the arena is flat fills rather than art.
-- [ ] M5: The push mechanic (tap & charge)
-- [ ] M6: Dynamic camera & juice
+
+Under discussion, not yet specced: a shoveable sliding hazard (a bomb) that both
+players can kick around. Open question is whether its explosion should be radial
+— which would deliberately break the aimed-hit rule the rest of the game is
+built on — or directional.
 
 ## Requirements
 
@@ -117,6 +122,7 @@ because stopping distance goes as `1 / (friction × scale)`.
 | Left stick | Movement | Accelerates with momentum and inertia |
 | **A — tap** | Quick shove | Short forward lunge, light knockback |
 | **A — hold & release** | Heavy charge | Braces while held, then a full-power lunge that can ring an opponent out |
+| **B — hold** | Guard | Plants the player for ~0.5 s: no movement, no turning, greatly reduced knockback, and part of the blow reflected back |
 
 Holding A builds charge for up to 1.5 s, shown as a gauge around the wrestler.
 While charging the player is braced: slower and harder to turn, so committing
@@ -183,6 +189,146 @@ make shoving the only practical way out.
 
 `Arena.boundary_enabled` is still an inspector toggle for tuning; turning it off
 makes the ring entirely unbounded.
+
+## Commitment and chain reactions
+
+### Whiff punishment
+
+Release a **charged** shove and connect with nothing, and the wrestler is off
+balance for `whiff_recovery_time` (0.55 s): acceleration is scaled to zero, so
+the stick does nothing, and friction is tripled, so they cannot build momentum
+either. They also cannot start another charge — a whiff leaves no counter-attack.
+
+0.55 s is roughly the time it takes to rebuild momentum from rest anyway
+(acceleration 2600 to top speed 560), so a whiffed charge is a net loss and an
+opponent closing into open space has a real window to punish it.
+
+A **tap** is never punished, so mashing the button is never a strategy. The
+window clears early on any contact, so brushing past someone is a way out rather
+than serving the full sentence, and it never stacks — re-entering recovery does
+not extend an existing one.
+
+The wrestler wears a dashed red cage while off balance. The punishment has to be
+legible to the opponent reading it, not just felt by the player it hits.
+
+### Knockback transfer
+
+A player sliding under knockback passes **55%** of their speed into whoever they
+run into. One shove can now chain through a third player.
+
+This one is deliberately **not aimed**. A shove throws a victim along the
+attacker's line of attack; a collision throws them along the impact line. That
+contrast is the whole point — it is the difference between being hit and being
+used as a weapon.
+
+Momentum is never handed back to the player who threw it (`_knockback_source`),
+or two wrestlers would shove each other in a loop. Anything slower than
+`knockback_transfer_min_speed` (220 px/s) passes through as a harmless bump, and a
+short cooldown stops two bodies held together from feeding each other every
+frame.
+
+## HUD
+
+Two screen-space overlays, both on `CanvasLayer` so the camera never moves them.
+
+**Announcer banner** — centred round messages. The text is player-coloured,
+which against the clay arena or the amber warning track was close to unreadable,
+so it sits on a dark rounded `StyleBoxFlat` (alpha 0.86, 12 px corners, a drop
+shadow, and 34/18 px content margins). The border is tinted to match the message,
+so a blue player's win announcement has a blue frame. A `PanelContainer` shrink-
+wraps the label rather than filling the screen.
+
+The **whole panel** hides when there is no message and fades with its text —
+hiding only the label would leave the backdrop parked over the arena as an empty
+black rectangle, and fading only the label would flash it up empty before the text
+arrived. The fade is capped at half the message duration so short announcements
+still reach full opacity instead of ramping up and straight back down.
+
+**Scoreboard** — running round wins, pinned top-left, one line per player with the
+name in that player's colour. It lists the whole roster rather than only the
+players still in the round: an eliminated player is out of the fight but still
+has a tally. Rebuilds on `RoundManager.scores_changed` and on any roster change,
+so connecting a controller mid-session updates it immediately.
+
+## The guard
+
+Hold **B** and the wrestler plants. Movement and turning are both locked out,
+existing momentum is killed dead, and they take greatly reduced knockback while
+bouncing part of the blow back at the attacker.
+
+`guard_coverage_ratio` is the dial you asked for, from **no coverage to full**:
+
+| Ratio | Cone | Result |
+| --- | --- | --- |
+| 0.0 | nothing | Guard does nothing at all |
+| 0.5 *(default)* | front 180° | Protects a half-circle in front |
+| 1.0 | all 360° | Protects from every direction |
+
+Coverage holds at **full** across the inner 65% of the cone and only then gives
+out, so the guard is either working or plainly failing rather than half-working.
+Measured against a full charge:
+
+| Defender facing off-axis | Coverage | Victim slid | Attacker bounced |
+| --- | --- | --- | --- |
+| 0° | 1.00 | 21 px | 246 px |
+| 45° | 1.00 | 21 px | 246 px |
+| 60° | 0.99 | 23 px | 243 px |
+| 70° | 0.70 | 163 px | 119 px |
+| 80° | 0.24 | 630 px | 13 px |
+| 90°+ | 0.00 | 992 px | none |
+
+Because you cannot turn, a guarded wrestler is still punishable from behind —
+that is the intended counter to guarding, not a gap in it. The sharp rim is
+what makes that counter land.
+
+| Setting | Default | Purpose |
+| --- | --- | --- |
+| `guard_duration` | 0.5 s | Stance length |
+| `guard_cooldown` | 2.0 s | Dead time, starts when the stance ends |
+| `guard_coverage_ratio` | 0.5 | Frontal cone, 0–1 |
+| `guard_damage_taken` | 0.15 | Impulse still absorbed when fully covered — never 0, or a blocked hit gives no feedback |
+| `guard_reflect_ratio` | 0.5 | Impulse bounced back, scaled by coverage |
+| `guard_stagger_time` | 0.5 s | How long the bounced attacker cannot rebuild momentum |
+| `guard_stagger_accel_scale` | 0.0 | Stick acceleration while staggered |
+
+A covered hit does two things, and both are needed. It **stops the attacker's
+lunge** — otherwise the reflection is swamped by their own momentum and they
+plough straight through. And it **staggers** them, because stopping is not
+enough on its own: zeroing the current velocity lasts a single frame, and the
+stick starts rebuilding it immediately at full acceleration.
+
+### The bounce has to beat the lunge
+
+This is the part that was easy to get wrong. A full charge carries an attacker
+about **99 px** forward before contact, so a reflection worth roughly the same
+distance does not read as a bounce at all — the attacker simply ends up back
+where they started, which looks exactly like being stopped. The numbers that
+mattered, all measured from the point of contact:
+
+| | Bounce | Net displacement |
+| --- | --- | --- |
+| Stick released | 246 px | **+147 px** (pushed back) |
+| Leaning into the guard | 191 px | still bounces |
+
+So `guard_reflect_ratio` is not just "how hard", it decides whether the mechanic
+is legible. Anything under about 1.5× the lunge distance reads as a stop.
+
+While staggered the attacker cannot charge or guard either, so bouncing off a
+guard is punishable rather than a free trade.
+
+Guard and charge are mutually exclusive — both are immobile commitments, and
+cancelling a paid-for charge to enter one would be a silent loss. Guarding does
+**not** trigger the Milestone 7 whiff state, and a hit landing on a guard still
+counts as connected for the attacker.
+
+Reflections are flagged non-transferable so a bounced attacker cannot cascade into
+a third player through Milestone 7's knockback transfer.
+
+### Timing
+
+The stance lasts 0.5 s but a full charge takes 1.5 s to build. You therefore
+cannot guard against a wind-up — you have to react to the **lunge**, which lasts
+0.22 s and fits comfortably inside the window. Guarding early does nothing.
 
 ## Rounds
 
@@ -262,7 +408,7 @@ against, except the two arena circles, which are gameplay radii and stay put.
 | Camera `body_margin` | 60 | **96** |
 | Camera `shake_intensity` | 65 | **104** |
 
-Everything *tuned* is deliberately **not** scaled: `max_speed` (620),
+Everything *tuned* is deliberately **not** scaled: `max_speed` (560),
 `knockback_decay` (480), `wall_break_speed` (400), `spawn_radius` (300), and the
 charged shove impulse (980). Those were balanced against the arena circles, which
 did not change.
@@ -278,7 +424,8 @@ Two bodies now touch at 84 px rather than 52, and the hitbox still reaches
 | `scripts/arena.gd` | Zone shapes, wall collision, warning-track friction |
 | `scripts/arena_view.gd` | Draws floor, warning track, pulsing rim, start lines |
 | `scripts/round_manager.gd` | Round state, elimination, winner, scores, reset |
-| `scripts/announcer.gd` | Fading centre-screen banner for round messages |
+| `scripts/announcer.gd` | Centred banner for round messages, on its own backdrop |
+| `scripts/scoreboard.gd` | Corner panel listing each player's round wins |
 | `scripts/game_manager.gd` | Detects joypads, spawns/removes players, binds devices |
 | `scripts/player.gd` | `CharacterBody2D` movement: acceleration, friction, facing rotation |
 | `scripts/player_input.gd` | Player slot ↔ action set ↔ device binding |
@@ -290,12 +437,26 @@ Two bodies now touch at 84 px rather than 52, and the hitbox still reaches
 | `scenes/main.tscn` | Main scene |
 
 Movement tuning lives on the `Player` node in the inspector: `player_index`,
-`max_speed`, `acceleration`, `friction`, `turn_speed`. The default ratio gives
-roughly a 0.24 s time to top speed and 0.34 s to coast to a stop, so momentum is
-pronounced — intentional, since Milestone 5's charged shove builds on it.
+`max_speed`, `acceleration`, `friction`, `turn_speed`. At the current defaults
+(`max_speed` 560, `acceleration` 2600, `friction` 1800) that is roughly a 0.22 s
+time to top speed and 0.31 s to coast to a stop, so momentum is pronounced —
+intentional, since Milestone 5's charged shove builds on it.
+
+`max_speed` governs **stick-driven cruising only**. Lunge speeds
+(`quick_lunge_speed` 700, `charged_lunge_speed` 1500) and all knockback slides
+are set independently, so slowing the wrestlers down does not shorten how far a
+shove throws anyone — it just makes the shoves read as relatively heavier.
+`max_speed` must stay above `wall_break_speed` (400) so a wrestler can still
+walk themselves out of the ring.
 
 ## Notes for future milestones
 
+- **M8 is built.** Guard and charge are mutually exclusive, and `bind_device()`
+  erases every joypad binding for a slot before re-adding, so a new early return
+  cannot strand a stale device on it.
+- **M7 is built.** `knockback_transfer_ratio` makes accidental ring-outs easier to
+  cause, and it compounds with the soft boundary — in a four-player game a single
+  shove near the rim can now put two players out. Worth watching before tuning.
 - **`Player` emits `shove_landed(target, power)`.** M6 only needs to connect it
   to the camera for impact shake.
 - **`GameCamera` must frame `active_players()`, never `players`.** Eliminated
@@ -333,7 +494,7 @@ pronounced — intentional, since Milestone 5's charged shove builds on it.
   decides per player whether the wall still stops them, via the `players`
   group. A player already past the boundary stays unblocked so the wall cannot
   shove them back in.
-- `wall_break_speed` (400) is deliberately **below** `max_speed` (620) so a
+- `wall_break_speed` (400) is deliberately **below** `max_speed` (560) so a
   player can leave the ring under their own power, and above casual drift so the
   boundary still holds. It reverses Milestone 3's "players collide with the arena
   bounds" — the boundary is now soft rather than absolute. Both are inspector

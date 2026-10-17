@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/game_manager.gd" id="2_manager"]
@@ -6,6 +6,43 @@
 [ext_resource type="PackedScene" path="res://scenes/arena.tscn" id="4_arena"]
 [ext_resource type="Script" path="res://scripts/round_manager.gd" id="5_round"]
 [ext_resource type="Script" path="res://scripts/announcer.gd" id="6_announcer"]
+[ext_resource type="Script" path="res://scripts/scoreboard.gd" id="7_scoreboard"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_banner"]
+content_margin_left = 34.0
+content_margin_top = 18.0
+content_margin_right = 34.0
+content_margin_bottom = 18.0
+bg_color = Color(0.05, 0.05, 0.08, 0.86)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(1, 1, 1, 0.9)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+shadow_color = Color(0, 0, 0, 0.45)
+shadow_size = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_score"]
+content_margin_left = 20.0
+content_margin_top = 14.0
+content_margin_right = 22.0
+content_margin_bottom = 14.0
+bg_color = Color(0.05, 0.05, 0.08, 0.74)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(1, 1, 1, 0.55)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+shadow_color = Color(0, 0, 0, 0.4)
+shadow_size = 8
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
@@ -30,12 +67,35 @@ announcer_path = NodePath("../Announcer")
 [node name="Announcer" type="CanvasLayer" parent="."]
 script = ExtResource("6_announcer")
 
-[node name="Label" type="Label" parent="Announcer"]
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
+[node name="Banner" type="PanelContainer" parent="Announcer"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_banner")
+
+[node name="Label" type="Label" parent="Announcer/Banner"]
 theme_override_font_sizes/font_size = 48
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="Scoreboard" type="CanvasLayer" parent="."]
+script = ExtResource("7_scoreboard")
+
+[node name="Panel" type="PanelContainer" parent="Scoreboard"]
+anchors_preset = 0
+offset_left = 22.0
+offset_top = 22.0
+offset_right = 22.0
+offset_bottom = 22.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_score")
+
+[node name="Label" type="RichTextLabel" parent="Scoreboard/Panel"]
+custom_minimum_size = Vector2(130, 0)
+bbcode_enabled = true
+scroll_active = false
+fit_content = true
+theme_override_font_sizes/normal_font_size = 26

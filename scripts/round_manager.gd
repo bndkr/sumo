@@ -18,6 +18,11 @@ signal round_started()
 signal round_finished(winner_slot: int)
 signal round_reset()
 
+## Emitted when the tally changes or the roster grows, so the scoreboard can
+## rebuild. Kept separate from round_finished because the table also changes
+## when a controller connects mid-session.
+signal scores_changed(scores: Array[int])
+
 enum State {
 	WAITING, ## Fewer than two players; nothing to decide.
 	ACTIVE,  ## Players are fighting.
@@ -83,6 +88,7 @@ func _process(delta: float) -> void:
 func _on_players_changed(_players: Array[Player]) -> void:
 	while scores.size() < _game_manager.players.size():
 		scores.append(0)
+		scores_changed.emit(scores)
 
 	if state == State.WAITING:
 		_begin_round_if_possible()
@@ -151,6 +157,7 @@ func _evaluate_round_end() -> void:
 	while scores.size() <= winner_slot:
 		scores.append(0)
 	scores[winner_slot] += 1
+	scores_changed.emit(scores)
 
 	var summary := PackedStringArray()
 	for i in _game_manager.players.size():

@@ -44,17 +44,39 @@ var charge_ratio: float = 0.0:
 		charge_ratio = clamped
 		queue_redraw()
 
+
+## Mirrors whether the owner is helpless from a whiffed charge.
+var is_off_balance: bool = false:
+	set(value):
+		if value == is_off_balance:
+			return
+		is_off_balance = value
+		queue_redraw()
+
+
+## Mirrors the owner's guard, 1.0 at the start of a stance down to 0.0.
+var guard_ratio: float = 0.0:
+	set(value):
+		var clamped := clampf(value, 0.0, 1.0)
+		if is_equal_approx(clamped, guard_ratio):
+			return
+		guard_ratio = clamped
+		queue_redraw()
+
 ## Seconds the impact flash takes to fade.
 const FLASH_TIME := 0.22
 
 var _flash := 0.0
+var _time := 0.0
 
 
 func _process(delta: float) -> void:
-	if _flash <= 0.0:
-		return
-	_flash = maxf(0.0, _flash - delta / FLASH_TIME)
-	queue_redraw()
+	if is_off_balance:
+		_time += delta
+		queue_redraw()
+	if _flash > 0.0:
+		_flash = maxf(0.0, _flash - delta / FLASH_TIME)
+		queue_redraw()
 
 
 ## Bright flash on being struck. Makes a landing hit legible at speed, when the
@@ -110,6 +132,33 @@ func _draw() -> void:
 
 	if charge_ratio > 0.0:
 		_draw_charge_arc(charge_ratio)
+	if guard_ratio > 0.0:
+		_draw_guard_ring(guard_ratio)
+	if is_off_balance:
+		_draw_off_balance()
+
+
+## Depleting ring around a guarding wrestler. Reads as a countdown rather than a
+## charge-up, and is tinted cool blue to stay distinct from the amber charge gauge
+## and the red off-balance cage.
+func _draw_guard_ring(ratio: float) -> void:
+	var from := -PI * 0.5
+	var to := from + TAU * ratio
+	draw_arc(Vector2.ZERO, RADIUS + CHARGE_GAP * 1.2, from, to, 40, Color(0.55, 0.85, 1.0, 0.95), CHARGE_WIDTH, true)
+	# Faint full ring underneath, so the stance still reads as present even as
+	# the remaining time drains away.
+	draw_arc(Vector2.ZERO, RADIUS + CHARGE_GAP * 1.2, 0.0, TAU, 40, Color(0.55, 0.85, 1.0, 0.18), CHARGE_WIDTH * 0.5, true)
+
+
+## Dashed cage around a wrestler who charged at nothing. The punishment has to be
+## legible to the opponent reading it, not just felt by the player it hits.
+func _draw_off_balance() -> void:
+	var wobble := 1.0 + 0.06 * sin(_time * 18.0)
+	var gap := TAU / 10.0
+	var tint := Color(1.0, 0.45, 0.35, 0.9)
+	for i in 5:
+		var from := i * gap * 2.0 + _time * 3.0
+		draw_arc(Vector2.ZERO, (RADIUS + CHARGE_GAP * 1.5) * wobble, from, from + gap, 12, tint, CHARGE_WIDTH * 0.8, true)
 
 
 ## Wind-up gauge around the body. Grows and reddens with charge so a held shove
