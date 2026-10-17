@@ -116,6 +116,7 @@ func reset_players() -> void:
 		# starts moving again, or the arena will eliminate it once more.
 		player.global_position = spawn_position(slot, players.size(), spawn_center, spawn_radius)
 		player.stop_motion()
+		player.reset_shove()
 		player.set_active(true)
 
 

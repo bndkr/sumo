@@ -35,6 +35,25 @@ var charge_ratio: float = 0.0:
 		charge_ratio = clamped
 		queue_redraw()
 
+## Seconds the impact flash takes to fade.
+const FLASH_TIME := 0.22
+
+var _flash := 0.0
+
+
+func _process(delta: float) -> void:
+	if _flash <= 0.0:
+		return
+	_flash = maxf(0.0, _flash - delta / FLASH_TIME)
+	queue_redraw()
+
+
+## Bright flash on being struck. Makes a landing hit legible at speed, when the
+## shove is over almost before the knockback reads.
+func flash() -> void:
+	_flash = 1.0
+	queue_redraw()
+
 
 func _ready() -> void:
 	# Mirror the owning player's slot so a respawned or re-indexed wrestler
@@ -52,6 +71,7 @@ func _on_player_index_changed(index: int) -> void:
 
 func _draw() -> void:
 	var color: Color = PLAYER_COLORS[player_index]
+	color = color.lerp(Color(1.0, 1.0, 1.0), _flash * 0.8)
 
 	draw_circle(Vector2.ZERO, RADIUS, color)
 	draw_arc(Vector2.ZERO, RADIUS, 0.0, TAU, 48, color.darkened(0.45), 3.0, true)

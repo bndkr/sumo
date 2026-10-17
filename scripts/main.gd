@@ -5,7 +5,7 @@ extends Node2D
 ## boundary-wall toggle.
 
 @onready var _manager: GameManager = $GameManager
-@onready var _camera: FitCamera = $Camera2D
+@onready var _camera: GameCamera = $Camera2D
 
 
 func _ready() -> void:

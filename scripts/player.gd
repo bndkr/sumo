@@ -192,6 +192,7 @@ func set_active(active: bool) -> void:
 	is_active = active
 	set_physics_process(active)
 	stop_motion()
+	reset_shove()
 
 	var view := get_node_or_null(^"BodyView") as Node2D
 	if view != null:
@@ -199,12 +200,43 @@ func set_active(active: bool) -> void:
 
 	if not active:
 		surface_friction_scale = 1.0
-		shove_state = ShoveState.READY
-		charge_ratio = 0.0
+
+
+## Abandons any charge in progress and disarms the hitbox.
+##
+## Called whenever a player leaves or joins a round, so a wind-up cannot be
+## carried across the boundary - a player still holding the button simply starts
+## a fresh charge for the new round. Lives outside [method set_active] because
+## that returns early when the player's active state is unchanged, which is
+## exactly the case for a player who was never eliminated.
+func reset_shove() -> void:
+	shove_state = ShoveState.READY
+	charge_ratio = 0.0
+	_charge_elapsed = 0.0
+	_cooldown_timer = 0.0
+	_shove_timer = 0.0
+	_shove_hits.clear()
+	# Cleared so a button still held at reset time reads as a fresh press and
+	# begins a new charge, rather than being swallowed as the release of the
+	# charge we just cancelled.
+	_shove_was_down = false
+
+	if _hitbox != null:
+		_hitbox.set_deferred(&"monitoring", false)
+	_set_hitbox_radius(hitbox_radius_min)
+	_refresh_collision_mask()
+	_sync_charge_indicator()
+
+
+## Bright-flashes the body. Presentation only; safe to call on an eliminated
+## player whose view is hidden.
+func flash() -> void:
+	var view := get_node_or_null(^"BodyView") as PlayerBodyView
+	if view != null:
+		view.flash()
 
 
 ## Clears stick momentum, knockback, and the derived velocity.
-##
 ## Clearing [member velocity] alone is not enough: it is rebuilt every physics
 ## frame from the two accumulators, so a player revived with knockback still in
 ## _knockback_velocity is launched straight back out of the ring the instant the
@@ -354,6 +386,7 @@ func _on_hitbox_body_entered(body: Node2D) -> void:
 
 	target.interrupt()
 	target.add_knockback(_knockback_direction_for(target) * _shove_impulse)
+	target.flash()
 
 	# Carry some momentum into the victim so the two visibly meet. Stopping dead
 	# instead would leave a gap between them, which reads as a shove that fired

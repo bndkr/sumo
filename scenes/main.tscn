@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/game_manager.gd" id="2_manager"]
-[ext_resource type="Script" path="res://scripts/fit_camera.gd" id="3_camera"]
+[ext_resource type="Script" path="res://scripts/game_camera.gd" id="3_camera"]
 [ext_resource type="PackedScene" path="res://scenes/arena.tscn" id="4_arena"]
 [ext_resource type="Script" path="res://scripts/round_manager.gd" id="5_round"]
 [ext_resource type="Script" path="res://scripts/announcer.gd" id="6_announcer"]

@@ -10,7 +10,10 @@ Godot 4. See [design.md](design.md) for the full design and milestone list.
 - [x] M3: The arena & dual ring zones
 - [x] M4: Elimination & round reset loop
 - [x] M5: The push mechanic (tap & charge)
-- [ ] M6: Dynamic camera & juice
+- [x] M6: Dynamic camera & juice
+
+All six milestones are implemented. What is still placeholder: the wrestlers are
+coloured circles, and the arena is flat fills rather than art.
 - [ ] M5: The push mechanic (tap & charge)
 - [ ] M6: Dynamic camera & juice
 
@@ -202,6 +205,43 @@ mid-message and then do it all over again when the timer ran out.
 Charge a full lunge into an opponent near the rim and you should see them
 sketch out through the wall, the round resolve, and everyone reset.
 
+## Camera and feel
+
+`GameCamera` frames the **bounding box of the active players** and eases toward
+it — position damping 7.0, zoom damping 3.5. The slower zoom reads as a
+deliberate camera move rather than a snap.
+
+It uses `GameManager.active_players()`, not `players`. Eliminated players stay
+in the roster because their controller is connected, and they come to rest out
+in the void; framing the roster would drag the camera clean off the ring the
+moment anyone was knocked out.
+
+Zoom fits the box against the viewport and is clamped to 0.3 – 1.0, so the arena
+never leaves the screen and the camera never zooms past 1:1.
+
+### Screen shake
+
+Trauma-based: hits add trauma, trauma decays at 2.0/s, and the applied offset
+scales with **trauma raised to 1.5**. Squaring was tried first and made
+mid-power hits effectively invisible, which is exactly the range where a shove
+should still land.
+
+| Setting | Default | Purpose |
+| --- | --- | --- |
+| `shake_power_threshold` | 0.35 | Taps and weak hits stay quiet |
+| `shake_trauma_per_hit` | 0.85 | Trauma from a full-power point-blank hit |
+| `shake_intensity` | 65 px | Offset at full trauma |
+| `shake_decay` | 2.0/s | How fast it settles |
+| `shake_frequency` | 26 | Noise sample rate — must be high or the shake comes out as zero |
+| `shake_falloff_distance` | 900 px | Distant hits shake up to 70% less |
+
+A full-charge hit at close range measures a **17 px peak**, against ~1.6 px
+before. Raise `shake_intensity` further if it still reads as too polite.
+
+There is also a brief white **impact flash** on a struck wrestler, which makes a
+landing hit legible at speed, when the shove is over almost before the knockback
+reads.
+
 ## Layout
 
 | Path | Purpose |
@@ -213,8 +253,8 @@ sketch out through the wall, the round resolve, and everyone reset.
 | `scripts/game_manager.gd` | Detects joypads, spawns/removes players, binds devices |
 | `scripts/player.gd` | `CharacterBody2D` movement: acceleration, friction, facing rotation |
 | `scripts/player_input.gd` | Player slot ↔ action set ↔ device binding |
-| `scripts/player_body_view.gd` | Placeholder art: colored disc + facing chevron |
-| `scripts/fit_camera.gd` | Centres and zooms to fit the roster |
+| `scripts/player_body_view.gd` | Placeholder art: colored disc + facing chevron, charge gauge, impact flash |
+| `scripts/game_camera.gd` | Frames the active roster; trauma-based screen shake |
 | `scripts/main.gd` | Scene entry point; wires the manager to the camera |
 | `scenes/player.tscn` | Player scene |
 | `scenes/arena.tscn` | Arena scene |
@@ -229,6 +269,15 @@ pronounced — intentional, since Milestone 5's charged shove builds on it.
 
 - **`Player` emits `shove_landed(target, power)`.** M6 only needs to connect it
   to the camera for impact shake.
+- **`GameCamera` must frame `active_players()`, never `players`.** Eliminated
+  players sit in the void and will drag the view off the ring.
+- **Round state resets are not all in `set_active`.** That returns early when a
+  player's active state is unchanged, which is exactly the case for a player who
+  was never eliminated — so a charge in progress survived the round boundary.
+  `Player.reset_shove()` is called separately from `GameManager.reset_players()`.
+- **Shake noise frequency has to be high** (26, not a fraction of a hertz). At
+  low frequency the sampler reads a flat patch of noise and the shake is
+  numerically zero even at full trauma.
 - **A round reset happens exactly once, and only from the round-over timer.**
   Any other path calling `GameManager.reset_players()` while a round is being
   announced produces a visible double reset. The single legitimate extra caller
