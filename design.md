@@ -75,7 +75,3 @@ Each milestone represents a discrete, independently testable build you can rapid
 * **Goal:** Keep all active players framed on screen and add polish.
 * **Testable Endpoint:** As players move away from each other toward the edge of the ring, the camera smoothly zooms out to keep everyone visible. Add screen shake when a heavy charge connects.
 * **AI Prompt Target:** Write a camera script that calculates the midpoint and max distance between all active player nodes, dynamically adjusting `zoom` and position, plus a shake helper function.
-
----
-
-Would you like to start generating the code for **Milestone 1** right now?

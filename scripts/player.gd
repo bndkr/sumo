@@ -33,12 +33,19 @@ signal player_index_changed(index: int)
 ## Radians per second the facing chevron rotates to track movement.
 @export var turn_speed: float = 14.0
 
+## Multiplier on [member friction] for the surface the player is standing on.
+## [Arena] lowers this inside the warning track. Clamped so a bad zone value can
+## never reverse or zero out braking.
+var surface_friction_scale: float = 1.0:
+	set(value):
+		surface_friction_scale = clampf(value, 0.0, 1.0)
+
 
 func _physics_process(delta: float) -> void:
 	var input_direction := PlayerInput.get_move_vector(player_index)
 
 	if input_direction.is_zero_approx():
-		velocity = velocity.move_toward(Vector2.ZERO, friction * delta)
+		velocity = velocity.move_toward(Vector2.ZERO, friction * surface_friction_scale * delta)
 	else:
 		velocity = velocity.move_toward(input_direction * max_speed, acceleration * delta)
 		_rotate_facing_toward(velocity.angle(), delta)
