@@ -19,8 +19,25 @@ const PLAYER_COLORS: Array[Color] = [
 
 var player_index: int = 0:
 	set(value):
-		player_index = clampi(value, 0, PlayerBodyView.PLAYER_COLORS.size() - 1)
+		var clamped := clampi(value, 0, PlayerBodyView.PLAYER_COLORS.size() - 1)
+		if clamped == player_index:
+			return
+		player_index = clamped
 		queue_redraw()
+
+
+func _ready() -> void:
+	# Mirror the owning player's slot so a respawned or re-indexed wrestler
+	# recolours itself without the GameManager knowing about presentation.
+	var owner_player := get_parent() as Player
+	if owner_player == null:
+		return
+	player_index = owner_player.player_index
+	owner_player.player_index_changed.connect(_on_player_index_changed)
+
+
+func _on_player_index_changed(index: int) -> void:
+	player_index = index
 
 
 func _draw() -> void:

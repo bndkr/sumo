@@ -8,10 +8,18 @@ extends CharacterBody2D
 ## [member friction] when the stick is released. Low friction relative to
 ## acceleration is what makes charges and shoves (Milestone 5) feel heavy.
 
-## 0-based player index. Selects which device's input actions this player reads.
+## Emitted when [member player_index] changes, so presentation can react without
+## the view having to poll.
+signal player_index_changed(index: int)
+
+## 0-based player index. Selects which action set this player reads.
 @export_range(0, 3) var player_index: int = 0:
 	set(value):
-		player_index = clampi(value, 0, PlayerInput.MAX_PLAYERS - 1)
+		var clamped := clampi(value, 0, PlayerInput.MAX_PLAYERS - 1)
+		if clamped == player_index:
+			return
+		player_index = clamped
+		player_index_changed.emit(player_index)
 
 ## Top speed in pixels per second.
 @export var max_speed: float = 620.0
