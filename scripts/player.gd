@@ -65,14 +65,15 @@ enum ShoveState {
 ## Hold longer than this and the shove counts as charged rather than a tap.
 @export var tap_threshold: float = 0.12
 
-## Knockback applied by a tap.
-@export var quick_shove_impulse: float = 260.0
+## Knockback applied by a tap. Tuned up from 260 so a quick jab actually moves
+## someone; still well short of [member charged_shove_impulse].
+@export var quick_shove_impulse: float = 380.0
 
 ## Knockback applied by a full charge.
 @export var charged_shove_impulse: float = 980.0
 
 ## Forward burst speed from a tap.
-@export var quick_lunge_speed: float = 520.0
+@export var quick_lunge_speed: float = 700.0
 
 ## Forward burst speed from a full charge.
 @export var charged_lunge_speed: float = 1500.0
@@ -84,10 +85,10 @@ enum ShoveState {
 @export var shove_cooldown: float = 0.3
 
 ## Hitbox radius for a tap, and for a fully charged lunge. Kept close to the
-## body: the wrestlers are 26 px, so they touch at 52 px, and a hitbox much
+## body: the wrestlers are 42 px, so they touch at 84 px, and a hitbox much
 ## longer than that fires while the two are still visibly apart.
-@export var hitbox_radius_min: float = 28.0
-@export var hitbox_radius_max: float = 34.0
+@export var hitbox_radius_min: float = 45.0
+@export var hitbox_radius_max: float = 54.0
 
 ## Top-speed and acceleration multipliers while bracing for a charge.
 @export var charge_speed_scale: float = 0.6

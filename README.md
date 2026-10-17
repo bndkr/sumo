@@ -84,7 +84,7 @@ definition and collision can never drift from what is drawn:
 | --- | --- | --- |
 | Safe floor | 0 – 420 | Normal friction |
 | Warning track | 420 – 600 | Friction × 0.6 — you slide further and turn more sluggishly |
-| Wall | 572 – 600 | Blocks normal movement; passes through above 700 px/s |
+| Wall | 572 – 600 | Soft barrier — stops anything under 400 px/s, yields above it |
 | Death zone | 600 – 3600 | Crossing it eliminates the player |
 
 Each annulus is filled with 96 convex wedges rather than one concave ring outline,
@@ -125,12 +125,12 @@ from tap to full power.
 
 | Release | Forward lunge | Knockback | Measured slide |
 | --- | --- | --- | --- |
-| Tap (< 0.12 s) | 520 px/s | 260 | **68 px** |
-| Half charge | ~1000 px/s | ~620 | **416 px** |
+| Tap (< 0.12 s) | 700 px/s | 380 | **147 px** |
+| Half charge | ~1000 px/s | ~620 | **495 px** |
 | Full charge | 1500 px/s | 980 | **992 px** |
 
 Knockback decays at a constant rate, so slide distance goes as the square of the
-impulse — a full charge carries an opponent about 14x further than a tap, which
+impulse — a full charge carries an opponent about 6.7x further than a tap, which
 is more than the arena is wide. From the centre of the ring only a full charge
 will actually ring someone out; taps and half charges leave them standing.
 
@@ -169,14 +169,20 @@ node. That restores the original centre-to-centre behaviour exactly, verified at
 
 ### Getting out of the ring
 
-The boundary wall blocks normal play but **yields to anything travelling faster
-than `wall_break_speed`** (700 px/s, deliberately above the 620 px/s top speed).
-That is what lets a full charge actually ring someone out instead of just
-pinning them against the rim. Running at the wall never breaks through.
+The boundary is a **soft** barrier, not a wall. A player moving faster than
+`wall_break_speed` (400 px/s, about 65% of top speed) stops colliding with it
+and passes straight through.
 
-`Arena.boundary_enabled` is still an inspector toggle for tuning; the keyboard
-shortcut that Milestone 4 used for it has been removed, since a shove is now the
-real way out.
+That means a wrestler can leave the ring **under their own power** — running at
+the rim is enough. Ring-out is not solely a punishment for being shoved, which
+also makes it a usable strategy: give ground deliberately to trade places.
+
+It is deliberately kept well above a drift, so easing gently toward the rim
+still holds. Lower it further to make the boundary almost nominal; raise it to
+make shoving the only practical way out.
+
+`Arena.boundary_enabled` is still an inspector toggle for tuning; turning it off
+makes the ring entirely unbounded.
 
 ## Rounds
 
@@ -242,6 +248,29 @@ There is also a brief white **impact flash** on a struck wrestler, which makes a
 landing hit legible at speed, when the shove is over almost before the knockback
 reads.
 
+## Scale
+
+Everything sized in world pixels is **1.6x** the value the tuning was built
+against, except the two arena circles, which are gameplay radii and stay put.
+
+| | Before | Now |
+| --- | --- | --- |
+| `safe_radius` / `warning_radius` | 420 / 600 | **420 / 600** (unchanged) |
+| Wrestler collision + art radius | 26 | **42** |
+| Hitbox offset / radii | 28 / 28–34 | **45 / 45–54** |
+| Wall thickness | 28 | **45** |
+| Camera `body_margin` | 60 | **96** |
+| Camera `shake_intensity` | 65 | **104** |
+
+Everything *tuned* is deliberately **not** scaled: `max_speed` (620),
+`knockback_decay` (480), `wall_break_speed` (400), `spawn_radius` (300), and the
+charged shove impulse (980). Those were balanced against the arena circles, which
+did not change.
+
+Because every dimension moved by the same factor, derived ratios are untouched.
+Two bodies now touch at 84 px rather than 52, and the hitbox still reaches
+1.179x the contact distance, so how a hit *connects* carries over unchanged.
+
 ## Layout
 
 | Path | Purpose |
@@ -271,6 +300,10 @@ pronounced — intentional, since Milestone 5's charged shove builds on it.
   to the camera for impact shake.
 - **`GameCamera` must frame `active_players()`, never `players`.** Eliminated
   players sit in the void and will drag the view off the ring.
+- **`quick_shove_impulse` must stay below `wall_break_speed`.** A tap's knockback
+  is a single velocity; if it reaches the break threshold a quick jab would
+  launch someone straight through the wall, silently turning taps into
+  eliminations. Currently 380 against 400 — raise one and the other must follow.
 - **Round state resets are not all in `set_active`.** That returns early when a
   player's active state is unchanged, which is exactly the case for a player who
   was never eliminated — so a charge in progress survived the round boundary.
@@ -300,10 +333,11 @@ pronounced — intentional, since Milestone 5's charged shove builds on it.
   decides per player whether the wall still stops them, via the `players`
   group. A player already past the boundary stays unblocked so the wall cannot
   shove them back in.
-- `wall_break_speed` (700) must stay above `max_speed` (620), or ordinary
-  running would breach the ring and Milestone 3's arena bounds would stop
-  holding. Both are inspector values — worth asserting together if either is
-  retuned.
+- `wall_break_speed` (400) is deliberately **below** `max_speed` (620) so a
+  player can leave the ring under their own power, and above casual drift so the
+  boundary still holds. It reverses Milestone 3's "players collide with the arena
+  bounds" — the boundary is now soft rather than absolute. Both are inspector
+  values; if the ring feels too leaky, raise it.
 - `GameManager.players` is the controller roster and deliberately still contains
   eliminated players; use `active_players()` for round logic, and check
   `is_active` before applying a shove to a body.

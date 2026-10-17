@@ -4,10 +4,19 @@ extends Node2D
 ## Placeholder art for a wrestler: a colored disc with a chevron pointing in the
 ## body's facing direction. Purely visual - collision lives on the parent
 ## CharacterBody2D. Swapped for real sprites later without touching gameplay.
+##
+## RADIUS must match the CollisionShape2D in player.tscn. Every figure here is
+## the pre-scale value times 1.6, so the body's proportions, the chevron, the
+## charge gauge and the label all keep their relationship to the collision shape.
 
-const RADIUS := 26.0
-const CHEVRON_LENGTH := 16.0
-const CHEVRON_WIDTH := 13.0
+const RADIUS := 42.0
+const CHEVRON_LENGTH := 26.0
+const CHEVRON_WIDTH := 21.0
+const OUTLINE_WIDTH := 5.0
+const CHEVRON_INSET := 10.0
+const CHARGE_GAP := 11.0
+const CHARGE_WIDTH := 8.0
+const LABEL_SIZE := 32
 
 ## Player colors, indexed by player_index (see design.md: Blue then Red).
 const PLAYER_COLORS: Array[Color] = [
@@ -74,11 +83,11 @@ func _draw() -> void:
 	color = color.lerp(Color(1.0, 1.0, 1.0), _flash * 0.8)
 
 	draw_circle(Vector2.ZERO, RADIUS, color)
-	draw_arc(Vector2.ZERO, RADIUS, 0.0, TAU, 48, color.darkened(0.45), 3.0, true)
+	draw_arc(Vector2.ZERO, RADIUS, 0.0, TAU, 48, color.darkened(0.45), OUTLINE_WIDTH, true)
 
 	# Chevron tip leads along +X, which is where the body rotates to face.
-	var tip := Vector2(RADIUS + CHEVRON_LENGTH - 6.0, 0.0)
-	var back := Vector2(RADIUS - 6.0, 0.0)
+	var tip := Vector2(RADIUS + CHEVRON_LENGTH - CHEVRON_INSET, 0.0)
+	var back := Vector2(RADIUS - CHEVRON_INSET, 0.0)
 	draw_colored_polygon(
 		PackedVector2Array([tip, back + Vector2(0.0, -CHEVRON_WIDTH), back + Vector2(0.0, CHEVRON_WIDTH)]),
 		Color(1.0, 1.0, 1.0, 0.9),
@@ -88,14 +97,14 @@ func _draw() -> void:
 	if font == null:
 		return
 	var label := str(player_index + 1)
-	var text_size := font.get_string_size(label, HORIZONTAL_ALIGNMENT_CENTER, -1.0, 20)
+	var text_size := font.get_string_size(label, HORIZONTAL_ALIGNMENT_CENTER, -1.0, LABEL_SIZE)
 	draw_string(
 		font,
 		Vector2(-text_size.x * 0.5, text_size.y * 0.32),
 		label,
 		HORIZONTAL_ALIGNMENT_CENTER,
 		-1.0,
-		20,
+		LABEL_SIZE,
 		Color(0.05, 0.05, 0.08, 0.75),
 	)
 
@@ -108,4 +117,4 @@ func _draw() -> void:
 func _draw_charge_arc(ratio: float) -> void:
 	var from := -PI * 0.5
 	var to := from + TAU * ratio
-	draw_arc(Vector2.ZERO, RADIUS + 7.0, from, to, 32, Color(1.0, 0.85, 0.35, 0.95), 5.0, true)
+	draw_arc(Vector2.ZERO, RADIUS + CHARGE_GAP, from, to, 32, Color(1.0, 0.85, 0.35, 0.95), CHARGE_WIDTH, true)

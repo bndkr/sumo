@@ -15,8 +15,9 @@ extends Camera2D
 ## Slack around the players' bounding box, as a multiplier on [member body_margin].
 @export var padding: float = 1.25
 
-## World-space slack kept around every player, in pixels.
-@export var body_margin: float = 60.0
+## World-space slack kept around every player, in pixels. Tracks the wrestler
+## size, so framing padding stays proportional if the bodies are rescaled.
+@export var body_margin: float = 96.0
 
 ## Never zoom in past 1:1, so the ring always stays in frame.
 @export var max_zoom: float = 1.0
@@ -41,8 +42,9 @@ extends Camera2D
 ## Trauma lost per second.
 @export var shake_decay: float = 2.0
 
-## Pixel offset applied at full trauma.
-@export var shake_intensity: float = 65.0
+## Pixel offset applied at full trauma. Scaled with the rest of the world so
+## shake reads the same regardless of how big the wrestlers are.
+@export var shake_intensity: float = 104.0
 
 ## How fast the shake noise is sampled, in noise-units per second. Needs to be
 ## high enough to read as a jitter - a fraction of a hertz just samples a flat

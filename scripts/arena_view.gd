@@ -58,6 +58,6 @@ func _draw_ring(inner: float, outer: float, color: Color) -> void:
 
 func _draw_start_line(angle: float) -> void:
 	var direction := Vector2.from_angle(angle)
-	var a := direction * (safe_radius - 70.0)
-	var b := direction * (safe_radius - 14.0)
-	draw_line(a, b, RIM_COLOR, 5.0, true)
+	var a := direction * (safe_radius - 112.0)
+	var b := direction * (safe_radius - 22.0)
+	draw_line(a, b, RIM_COLOR, 8.0, true)

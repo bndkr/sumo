@@ -4,10 +4,10 @@
 [ext_resource type="Script" path="res://scripts/player_body_view.gd" id="2_view"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_body"]
-radius = 26.0
+radius = 42.0
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_hitbox"]
-radius = 28.0
+radius = 45.0
 
 [node name="Player" type="CharacterBody2D"]
 collision_layer = 1
@@ -19,7 +19,7 @@ script = ExtResource("1_player")
 shape = SubResource("CircleShape2D_body")
 
 [node name="Hitbox" type="Area2D" parent="."]
-position = Vector2(28, 0)
+position = Vector2(45, 0)
 monitoring = false
 monitorable = false
 

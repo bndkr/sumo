@@ -27,7 +27,7 @@ signal elimination_detected(body: Node2D)
 @export var warning_radius: float = 600.0
 
 ## Thickness of the wall ring.
-@export var wall_thickness: float = 28.0
+@export var wall_thickness: float = 45.0
 
 ## How far past the wall the death zone is monitored.
 @export var death_zone_depth: float = 3000.0
@@ -45,10 +45,13 @@ signal elimination_detected(body: Node2D)
 @export var boundary_enabled: bool = true
 
 ## A player travelling faster than this stops colliding with the wall and passes
-## straight through. Must stay above [member Player.max_speed], or ordinary
-## running would breach the ring and Milestone 3's "collide with the arena
-## bounds" would stop holding.
-@export var wall_break_speed: float = 700.0
+## straight through.
+##
+## Set below [member Player.max_speed] so a wrestler can walk themselves out of
+## the ring under their own steam - ring-out is not solely a punishment for being
+## shoved. It stays well above a drift, so easing gently toward the rim still
+## holds and the boundary only yields to deliberate movement.
+@export var wall_break_speed: float = 400.0
 
 @onready var _warning_zone: Area2D = $WarningZone
 @onready var _death_zone: Area2D = $DeathZone
