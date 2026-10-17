@@ -1,0 +1,22 @@
+# Godot 4
+.godot/
+.import/
+/android/
+/build/
+/export/
+export_presets.cfg
+*.translation
+
+# Godot Mono / C#
+.mono/
+data_*/
+mono_crash.*.json
+
+# Editor / OS cruft
+*.tmp
+*.log
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
