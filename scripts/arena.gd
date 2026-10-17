@@ -15,6 +15,10 @@ extends Node2D
 ## [Boundary] wall gets made permeable - until then players cannot leave the ring
 ## at all, which is why M4's "drive player 2 out" needs the push mechanic first.
 
+## Emitted when a player crosses into the void. Milestone 4 consumes this to
+## trigger elimination.
+signal elimination_detected(body: Node2D)
+
 ## Radius of the safe floor.
 @export var safe_radius: float = 420.0
 
@@ -35,6 +39,13 @@ extends Node2D
 ## Wedges used to approximate each circle. Higher is smoother and costlier.
 @export_range(8, 256, 1) var segment_count: int = 96
 
+## Whether the solid wall is in place. Milestone 3 requires players to collide
+## with the arena bounds, which makes it impossible to *reach* the death zone
+## until Milestone 5's shove can breach it. Turning this off is the temporary
+## scaffold for testing elimination; Milestone 5 should make real shoves the
+## only way out.
+@export var boundary_enabled: bool = true
+
 @onready var _warning_zone: Area2D = $WarningZone
 @onready var _death_zone: Area2D = $DeathZone
 @onready var _boundary: StaticBody2D = $Boundary
@@ -54,6 +65,20 @@ func _ready() -> void:
 
 	_warning_zone.body_entered.connect(_on_warning_body_entered)
 	_warning_zone.body_exited.connect(_on_warning_body_exited)
+	# body_entered, not body_exited: the zone is the void *outside* the ring, so
+	# entering it is what means "eliminated".
+	_death_zone.body_entered.connect(_on_death_body_entered)
+	set_boundary_enabled(boundary_enabled)
+
+
+## Opens or closes the wall so a player can be driven into the void on foot.
+## Milestone 5 supersedes this.
+func set_boundary_enabled(enabled: bool) -> void:
+	boundary_enabled = enabled
+	for child in _boundary.get_children():
+		var collision := child as CollisionShape2D
+		if collision != null:
+			collision.set_deferred("disabled", not enabled)
 
 
 ## True when [param point] lies in the warning track.
@@ -109,3 +134,8 @@ func _on_warning_body_exited(body: Node2D) -> void:
 	if player == null:
 		return
 	player.surface_friction_scale = 1.0
+
+
+func _on_death_body_entered(body: Node2D) -> void:
+	if body is Player:
+		elimination_detected.emit(body)

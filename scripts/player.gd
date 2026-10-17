@@ -40,6 +40,37 @@ var surface_friction_scale: float = 1.0:
 	set(value):
 		surface_friction_scale = clampf(value, 0.0, 1.0)
 
+## False while eliminated: stops simulating, hides, and stops colliding.
+var is_active: bool = true
+
+
+## Enters or leaves the round. An inactive player is inert rather than freed, so
+## the controller that drives it stays bound and it can return for the next round.
+##
+## The collision shape is deliberately left enabled. Toggling it does not work
+## here: re-enabling happens deferred, while the physics body is still parked
+## wherever the player was eliminated, because a [CharacterBody2D] only syncs
+## its transform during [method PhysicsBody2D.move_and_slide] on the next
+## physics step. The arena's death zone would therefore see the body reappear
+## inside itself and fire `body_entered` again, eliminating the player on the
+## first frame of the new round. Moving the body back to its spawn mark (see
+## [method GameManager.reset_players]) lets the area deregister it naturally.
+## Eliminated players also stay solid to each other out in the void, which is
+## harmless because the boundary wall keeps live players out there.
+func set_active(active: bool) -> void:
+	if active == is_active:
+		return
+	is_active = active
+	set_physics_process(active)
+	velocity = Vector2.ZERO
+
+	var view := get_node_or_null(^"BodyView") as Node2D
+	if view != null:
+		view.visible = active
+
+	if not active:
+		surface_friction_scale = 1.0
+
 
 func _physics_process(delta: float) -> void:
 	var input_direction := PlayerInput.get_move_vector(player_index)

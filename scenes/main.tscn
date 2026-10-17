@@ -1,9 +1,11 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/game_manager.gd" id="2_manager"]
 [ext_resource type="Script" path="res://scripts/fit_camera.gd" id="3_camera"]
 [ext_resource type="PackedScene" path="res://scenes/arena.tscn" id="4_arena"]
+[ext_resource type="Script" path="res://scripts/round_manager.gd" id="5_round"]
+[ext_resource type="Script" path="res://scripts/announcer.gd" id="6_announcer"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
@@ -18,3 +20,22 @@ player_root_path = NodePath("../Players")
 
 [node name="Camera2D" type="Camera2D" parent="."]
 script = ExtResource("3_camera")
+
+[node name="RoundManager" type="Node" parent="."]
+script = ExtResource("5_round")
+arena_path = NodePath("../Arena")
+game_manager_path = NodePath("../GameManager")
+announcer_path = NodePath("../Announcer")
+
+[node name="Announcer" type="CanvasLayer" parent="."]
+script = ExtResource("6_announcer")
+
+[node name="Label" type="Label" parent="Announcer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 48
+horizontal_alignment = 1
+vertical_alignment = 1

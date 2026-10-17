@@ -105,6 +105,30 @@ func _rebuild() -> void:
 	players_changed.emit(players)
 
 
+## Restores every player to its spawn point and to full participation.
+## Milestone 4 calls this to begin a new round.
+func reset_players() -> void:
+	for slot in players.size():
+		var player := players[slot]
+		# Move first, then revive. A player knocked out is still lying in the
+		# death zone when the round resets, and [method Player.set_active] only
+		# resumes physics - so the body has to be back inside the ring before it
+		# starts moving again, or the arena will eliminate it once more.
+		player.global_position = spawn_position(slot, players.size(), spawn_center, spawn_radius)
+		player.set_active(true)
+		player.velocity = Vector2.ZERO
+
+
+## Players still in the round. Excludes eliminated players, which are still in
+## [member players] because their controller is still connected.
+func active_players() -> Array[Player]:
+	var alive: Array[Player] = []
+	for player in players:
+		if player.is_active:
+			alive.append(player)
+	return alive
+
+
 func _spawn_player(slot: int) -> void:
 	if _player_root == null:
 		return
