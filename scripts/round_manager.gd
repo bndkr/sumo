@@ -93,6 +93,14 @@ func _on_elimination_detected(body: Node2D) -> void:
 	if player == null or not player.is_active:
 		return
 
+	# The round is already decided. Retire them quietly and leave everyone where
+	# they are - the pending reset will bring the whole roster back. Repositioning
+	# here would yank the survivors back to their marks in the middle of the
+	# winner announcement, and then do it again when the timer runs out.
+	if state == State.OVER:
+		player.set_active(false)
+		return
+
 	if state != State.ACTIVE:
 		# Nothing is being decided (too few players), so do not strand anyone
 		# outside the ring - put them back where they belong.

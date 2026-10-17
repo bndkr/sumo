@@ -115,8 +115,8 @@ func reset_players() -> void:
 		# resumes physics - so the body has to be back inside the ring before it
 		# starts moving again, or the arena will eliminate it once more.
 		player.global_position = spawn_position(slot, players.size(), spawn_center, spawn_radius)
+		player.stop_motion()
 		player.set_active(true)
-		player.velocity = Vector2.ZERO
 
 
 ## Players still in the round. Excludes eliminated players, which are still in

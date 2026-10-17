@@ -22,6 +22,12 @@ const MAX_PLAYERS := 4
 
 const DIRECTIONS: Array[String] = ["left", "right", "up", "down"]
 
+## Action suffix for the shove button, bound per device like the movement axes.
+const SHOVE_SUFFIX := "shove"
+
+## Joypad button index for the Xbox "A" button.
+const JOY_BUTTON_A := 0
+
 ## Sentinel device ID meaning "this slot is keyboard only, no joypad".
 const NO_DEVICE := -1
 
@@ -33,6 +39,14 @@ static func get_move_vector(player_index: int) -> Vector2:
 	if prefix == "":
 		return Vector2.ZERO
 	return Input.get_vector(prefix + "_left", prefix + "_right", prefix + "_up", prefix + "_down")
+
+
+## True while the player's shove button is held.
+static func is_shove_pressed(player_index: int) -> bool:
+	var prefix := action_prefix(player_index)
+	if prefix == "":
+		return false
+	return Input.is_action_pressed(prefix + "_" + SHOVE_SUFFIX)
 
 
 ## Returns "p1".."p4" for a valid 0-based [param player_index], or "" if out of range.
@@ -70,6 +84,20 @@ static func bind_device(player_index: int, device_id: int) -> void:
 		motion.axis = 0 if direction in ["left", "right"] else 1
 		motion.axis_value = -1.0 if direction in ["left", "up"] else 1.0
 		InputMap.action_add_event(action, motion)
+
+	# The shove button follows the same rebinding as the stick.
+	var shove := prefix + "_" + SHOVE_SUFFIX
+	if not InputMap.has_action(shove):
+		return
+	for event in InputMap.action_get_events(shove):
+		if event is InputEventJoypadButton:
+			InputMap.action_erase_event(shove, event)
+	if device_id == NO_DEVICE:
+		return
+	var button := InputEventJoypadButton.new()
+	button.device = device_id
+	button.button_index = JOY_BUTTON_A
+	InputMap.action_add_event(shove, button)
 
 
 ## Returns the device ID currently bound to [param player_index], or

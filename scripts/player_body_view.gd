@@ -26,6 +26,16 @@ var player_index: int = 0:
 		queue_redraw()
 
 
+## Mirrors the owning player's shove charge, 0..1.
+var charge_ratio: float = 0.0:
+	set(value):
+		var clamped := clampf(value, 0.0, 1.0)
+		if is_equal_approx(clamped, charge_ratio):
+			return
+		charge_ratio = clamped
+		queue_redraw()
+
+
 func _ready() -> void:
 	# Mirror the owning player's slot so a respawned or re-indexed wrestler
 	# recolours itself without the GameManager knowing about presentation.
@@ -68,3 +78,14 @@ func _draw() -> void:
 		20,
 		Color(0.05, 0.05, 0.08, 0.75),
 	)
+
+	if charge_ratio > 0.0:
+		_draw_charge_arc(charge_ratio)
+
+
+## Wind-up gauge around the body. Grows and reddens with charge so a held shove
+## reads at a glance without any text.
+func _draw_charge_arc(ratio: float) -> void:
+	var from := -PI * 0.5
+	var to := from + TAU * ratio
+	draw_arc(Vector2.ZERO, RADIUS + 7.0, from, to, 32, Color(1.0, 0.85, 0.35, 0.95), 5.0, true)

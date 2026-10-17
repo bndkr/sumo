@@ -39,12 +39,16 @@ signal elimination_detected(body: Node2D)
 ## Wedges used to approximate each circle. Higher is smoother and costlier.
 @export_range(8, 256, 1) var segment_count: int = 96
 
-## Whether the solid wall is in place. Milestone 3 requires players to collide
-## with the arena bounds, which makes it impossible to *reach* the death zone
-## until Milestone 5's shove can breach it. Turning this off is the temporary
-## scaffold for testing elimination; Milestone 5 should make real shoves the
-## only way out.
+## Whether the solid wall is in place. Milestone 5 gives hard shoves enough
+## force to break through it, so this is now a tuning aid rather than a
+## gameplay dependency: turning it off makes the ring entirely unbounded.
 @export var boundary_enabled: bool = true
+
+## A player travelling faster than this stops colliding with the wall and passes
+## straight through. Must stay above [member Player.max_speed], or ordinary
+## running would breach the ring and Milestone 3's "collide with the arena
+## bounds" would stop holding.
+@export var wall_break_speed: float = 700.0
 
 @onready var _warning_zone: Area2D = $WarningZone
 @onready var _death_zone: Area2D = $DeathZone
@@ -71,8 +75,29 @@ func _ready() -> void:
 	set_boundary_enabled(boundary_enabled)
 
 
+func _physics_process(_delta: float) -> void:
+	_update_wall_breaches()
+
+
+## Decides, per player, whether the boundary still stops them.
+##
+## The wall blocks ordinary play but yields to a hard launch, which is what lets
+## a heavy charge actually ring someone out. Players already past the boundary
+## stay unblocked so they cannot be shoved back in by the wall they are outside
+## of.
+func _update_wall_breaches() -> void:
+	if not boundary_enabled:
+		return
+	for node in get_tree().get_nodes_in_group(&"players"):
+		var player := node as Player
+		if player == null or not player.is_active:
+			continue
+		var outside := player.global_position.length() >= warning_radius
+		player.set_ignores_wall(outside or player.velocity.length() > wall_break_speed)
+
+
 ## Opens or closes the wall so a player can be driven into the void on foot.
-## Milestone 5 supersedes this.
+## Used for testing and tuning; Milestone 5's shove is the real way out.
 func set_boundary_enabled(enabled: bool) -> void:
 	boundary_enabled = enabled
 	for child in _boundary.get_children():
@@ -112,6 +137,9 @@ func _build_shapes() -> void:
 		_add_shape(_death_zone, wedge)
 	for wedge in ring_wedges(warning_radius - wall_thickness, warning_radius, segment_count):
 		_add_shape(_boundary, wedge)
+
+	# Own collision layer so a launched player can drop just this one.
+	_boundary.collision_layer = Player.WALL_LAYER
 
 
 func _add_shape(host: Node, wedge: PackedVector2Array) -> void:

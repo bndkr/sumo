@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/player_body_view.gd" id="2_view"]
@@ -6,12 +6,25 @@
 [sub_resource type="CircleShape2D" id="CircleShape2D_body"]
 radius = 26.0
 
+[sub_resource type="CircleShape2D" id="CircleShape2D_hitbox"]
+radius = 28.0
+
 [node name="Player" type="CharacterBody2D"]
+collision_layer = 1
+collision_mask = 3
 motion_mode = 1
 script = ExtResource("1_player")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("CircleShape2D_body")
+
+[node name="Hitbox" type="Area2D" parent="."]
+position = Vector2(28, 0)
+monitoring = false
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hitbox"]
+shape = SubResource("CircleShape2D_hitbox")
 
 [node name="BodyView" type="Node2D" parent="."]
 script = ExtResource("2_view")
